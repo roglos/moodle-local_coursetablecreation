@@ -55,8 +55,10 @@ class coursetablecreation extends \core\task\scheduled_task {
         $sql = 'TRUNCATE '.$tablename;
         $DB->execute($sql);
 
+        /* Overarching/Domain pages
+         * ------------------------ */
         // Array of tables with module or overarching course or domain data.
-        $sourcetable1 = 'usr_data_object_categories';
+        $sourcetable1 = 'usr_data_courses';
 
         // Write from provided domain/school/subject course list into main course creation list.
         $sql = 'INSERT INTO '.$tablename. ' (course_fullname,course_shortname,course_idnumber,category_idnumber)
@@ -69,17 +71,31 @@ class coursetablecreation extends \core\task\scheduled_task {
                 SET category_id = mdl_course_categories.id';
         $DB->execute($sql);
 
+        /* Sandbox pages
+         * ------------- */
         // Add staff sandboxes to course creation list, based on staff usernames/emails.
-        $staffsandboxcategoryidnumber = "staff_SB";
+        $staffsandboxcategoryidnumber = 'staff_SB';
+        $sandboxcatid = $DB->get_record('course_categories', array('idnumber'=>'staff_SB'));
+        echo $sandboxcatid->id;
+
         $sourcetable2 = 'mdl_user';
         $sql = 'INSERT INTO '.$tablename. ' (course_fullname,course_shortname,course_idnumber)
-                SELECT username,username,username FROM '.$sourcetable2. ' WHERE ' .$sourcetable2. '
-                email LIKE "%@glos%"'; // Username used to populate all 3 course name fields initially.
+                SELECT username,CONCAT("sb_",username),CONCAT("sb_id_",username) FROM '.$sourcetable2. ' WHERE ' .$sourcetable2.
+                '.email LIKE "%@glos%"';
         $DB->execute($sql);
 
-        $sql = 'UPDATE ' . $tablename . '
-                INNER JOIN mdl_course_categories ON '.$tablename.'.category_idnumber = '
-                .$staffsandboxcategoryidnumber. ' SET category_id = mdl_course_categories.id';
+        // Add staff sandbox category_idnumber and category_id to table
+        $sql = "UPDATE " . $tablename . ", mdl_course_categories
+                SET " . $tablename . ".category_idnumber = '" . $staffsandboxcategoryidnumber ."', " . $tablename . ".category_id = " . $sandboxcatid->id . "
+                WHERE " . $tablename . ".course_idnumber LIKE '%sb%'";
+        $DB->execute($sql);
+
+        /* Update 'course' categories for changes
+         * -------------------------------------- */
+        // Update any altered categories for 'course' pages that already exist in mdl_course.
+        // If they have altered they should exist in the usr_data_courses or other source and therefore in usr_ro_modules.
+        $sql = 'UPDATE mdl_course, usr_ro_modules SET mdl_course.category = usr_ro_modules.category_id
+                WHERE mdl_course.idnumber = usr_ro_modules.category_idnumber';
         $DB->execute($sql);
 
     }
