@@ -25,6 +25,8 @@
 namespace local_coursetablecreation\task;
 use stdClass;
 
+defined('MOODLE_INTERNAL') || die();
+
 /**
  * A scheduled task for scripted database integrations.
  *
@@ -46,11 +48,10 @@ class coursetablecreation extends \core\task\scheduled_task {
      * Run sync.
      */
     public function execute() {
-        global $DB;
-        /* Get course data and UPDATE to include category id.
-         * ================================================== */
+        global $DB; // Ensures use of Moodle data-manipulation api.
 
-        // Clear main course/module creation table.
+        /* Clear main course/module creation table.
+         * ---------------------------------------- */
         $tablename = 'usr_ro_modules';
         /***************************************
          * usr_ro_modules                      *
@@ -61,13 +62,12 @@ class coursetablecreation extends \core\task\scheduled_task {
          *     category_idnumber               * To be removed
          *     category_id                     *
          ***************************************/
-
         $sql = 'TRUNCATE '.$tablename;
         $DB->execute($sql);
 
-        /* Overarching/Domain pages
-         * ------------------------ */
-        // Array of overarching course or domain data.
+        /* Overarching/Domain pages.
+         * ------------------------- */
+        // Array of overarching category data.
         $sourcetable1 = 'usr_data_categories';
         /***************************************
          * usr_data_categories                 *
@@ -81,13 +81,18 @@ class coursetablecreation extends \core\task\scheduled_task {
         $pages = array();
         $pages = $DB->get_records_sql($sql);
 
-        foreach($pages as $page) {
-            $fullname_old = $page->category_name;
-            $fullname = str_replace("'", "", $fullname_old); // Remove ' from fullname if present.
+        // Loop through categories array to create course site details for each category.
+        foreach ($pages as $page) {
+            $fullnameold = $page->category_name;
+            // Remove ' from fullname if present (prevents issues with sql line).
+            $fullname = str_replace("'", "", $fullnameold);
+            // Category sites do not have both shortname and idnumber so use category idnumber for both.
+            // Prefix with CRS for ease of identifying in front end UI and Db searches.
             $shortname = 'CRS-' . $page->category_idnumber;
             $idnumber = 'CRS-' . $page->category_idnumber;
             $categoryidnumber = $page->category_idnumber;
-            $category = $DB->get_record('course_categories', array('idnumber'=>$categoryidnumber));
+            // Get category id for the relevant category idnumber - this is what is needed in the table.
+            $category = $DB->get_record('course_categories', array('idnumber' => $categoryidnumber));
             $categoryid = $category->id;
             // Set new coursesite in table by inserting the data created above.
             $sql = "INSERT INTO " . $tablename . " (course_fullname,course_shortname,course_idnumber,category_id)
@@ -97,7 +102,7 @@ class coursetablecreation extends \core\task\scheduled_task {
 
         /* Taught Module Pages
          * ------------------- */
-        // Array of overarching course or domain data.
+        // Array of taught module/MAV pages for creation.
         $sourcetable3 = 'usr_data_courses';
         /***************************************
          * usr_data_courses                    *
@@ -108,45 +113,50 @@ class coursetablecreation extends \core\task\scheduled_task {
          *     course_startdate                *
          *     category_idnumber               *
          ***************************************/
-
         $sql = 'SELECT * FROM ' . $sourcetable3;
         $modpages = array();
         $modpages = $DB->get_records_sql($sql);
 
-        foreach($modpages as $modpage) {
-            $modfullname_old = $modpage->course_fullname;
-            $modfullname = str_replace("'", "", $modfullname_old); // Remove ' from fullname if present.
-            $modshortname = $modpage->course_shortname;
-            $modidnumber = $modpage->course_idnumber;
+        // Loop through MAV list array to create site details for each one.
+        foreach ($modpages as $modpage) {
+            $modfullnameold = $modpage->course_fullname;
+            // Remove ' from fullname if present (prevents issues with sql line).
+            $modfullname = str_replace("'", "", $modfullnameold);
+            // Find the category id using the category idnumber. id needed for table.
             $modcategoryidnumber = $modpage->category_idnumber;
-            $modcategory = $DB->get_record('course_categories', array('idnumber'=>$modcategoryidnumber));
-            $modcategoryid = $modcategory->id;
-            // Set new coursesite in table by inserting the data created above.
+            $modcategory = $DB->get_record('course_categories', array('idnumber' => $modcategoryidnumber));
+            // Set new module site in table by inserting the data retrieved above.
             $sql = "INSERT INTO " . $tablename . " (course_fullname,course_shortname,course_idnumber,category_id)
-                VALUES ('" . $modfullname . "','" . $modshortname . "','" . $modidnumber . "','" .$modcategoryid . "')";
+                VALUES ('" . $modfullname . "','" . $modpage->course_shortname . "','" .
+                $modpage->course_idnumber . "','" .$modcategory->id . "')";
             $DB->execute($sql);
         }
 
-        /* Staff Sandbox Pages
-         * ------------------- */
-        // Array of staff user data.
-        $sourcetable2 = 'user';
-        $select = "email LIKE '%@glos.ac.uk'";
-        $sandoxes = array();
-        $sandboxes = $DB->get_records_select($sourcetable2,$select);
-        $sbcategory = $DB->get_record('course_categories',
-                            array('idnumber' => 'staff_SB')); // Check idnumber of Sandbox category on live system
-        foreach($sandboxes as $sandbox) {
-            $newsandboxdata = array();
-            $sbfull = 'Sandbox Page: ' . $sandbox->idnumber . ' - ' . $sandbox->firstname . ' ' . $sandbox->lastname;
-            $sbshort = 'SB_' . $sandbox->idnumber;
-            $sbidnumber = 'SB_' . $sandbox->idnumber;
-            // Set new staff sandbox in table by inserting the data created above.
-            $sql4 = "INSERT INTO " . $tablename . " (course_fullname,course_shortname,course_idnumber,category_id)
-                VALUES ('" . $sbfull . "','" . $sbshort . "','" . $sbidnumber . "','" .$sbcategory->id . "')";
-            $DB->execute($sql4);
-        }
+        /* Staff Sandbox Pages.
+         * -------------------- */
+        // Find id of the staff_SB category. If there isn't one then bypass whole section.
+        if ($DB->get_record('course_categories', array('idnumber' => 'staff_SB'))) {
+            $sbcategory = $DB->get_record('course_categories',
+                            array('idnumber' => 'staff_SB'));
 
+            // Array of staff user data.
+            $sourcetable2 = 'user'; // No data definition as this is a standard mdl table.
+            $sandoxes = array();
+            $select = "email LIKE '%@glos.ac.uk'"; // Pattern match for staff email accounts.
+            $sandboxes = $DB->get_records_select($sourcetable2, $select);
+
+            // Loop through all staff accounts.
+            foreach ($sandboxes as $sandbox) {
+                // Create fullname, shortname and idnumber for use in table. SB- for easy identifying in UI/Db.
+                $sbfull = 'Sandbox Page: ' . $sandbox->username . ' - ' . $sandbox->firstname . ' ' . $sandbox->lastname;
+                $sbshort = 'SB-' . $sandbox->username;
+                $sbidnumber = 'SB-' . $sandbox->username;
+                // Set new staff sandbox in table by inserting the data created above.
+                $sql4 = "INSERT INTO " . $tablename . " (course_fullname,course_shortname,course_idnumber,category_id)
+                    VALUES ('" . $sbfull . "','" . $sbshort . "','" . $sbidnumber . "','" .$sbcategory->id . "')";
+                $DB->execute($sql4);
+            }
+        }
 
     }
 }
