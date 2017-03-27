@@ -24,8 +24,8 @@
 
 defined('MOODLE_INTERNAL') || die;
 
-$plugin->version   = 2017031501;
-$plugin->release   = '1.1';
+$plugin->version   = 2017032701;
+$plugin->release   = '1.3';
 $plugin->maturity  = MATURITY_STABLE;
 $plugin->requires  = 2014051200; // Moodle 2.7 release and upwards.
 $plugin->component = 'local_coursetablecreation';

@@ -29,8 +29,8 @@ $tasks = array(
     array(
         'classname' => 'local_coursetablecreation\task\coursetablecreation',
         'blocking' => 0,
-        'minute' => '*',
-        'hour' => '*',
+        'minute' => '35',
+        'hour' => '1',
         'day' => '*',
         'month' => '*',
         'dayofweek' => '*',
