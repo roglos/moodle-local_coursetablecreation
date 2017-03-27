@@ -121,14 +121,21 @@ class coursetablecreation extends \core\task\scheduled_task {
         foreach ($modpages as $modpage) {
             $modfullnameold = $modpage->course_fullname;
             // Remove ' from fullname if present (prevents issues with sql line).
-            $modfullname = str_replace("'", "", $modfullnameold);
+            $modfullnametwo = str_replace("'", "", $modfullnameold);
+            $modfullname = str_replace("?", "", $modfullnametwo);
+
             // Find the category id using the category idnumber. id needed for table.
             $modcategoryidnumber = $modpage->category_idnumber;
-            $modcategory = $DB->get_record('course_categories', array('idnumber' => $modcategoryidnumber));
+            if (!$DB->get_record('course_categories', array('idnumber' => $modcategoryidnumber))) {
+                $modcategory = $DB->get_record('course_categories', array('name' => 'Miscellaneous'));
+            } else {
+                $modcategory = $DB->get_record('course_categories', array('idnumber' => $modcategoryidnumber));
+            }
             // Set new module site in table by inserting the data retrieved above.
             $sql = "INSERT INTO " . $tablename . " (course_fullname,course_shortname,course_idnumber,category_id)
                 VALUES ('" . $modfullname . "','" . $modpage->course_shortname . "','" .
-                $modpage->course_idnumber . "','" .$modcategory->id . "')";
+                $modpage->course_idnumber . "','" . $modcategory->id . "')";
+            echo $sql;
             $DB->execute($sql);
         }
 
