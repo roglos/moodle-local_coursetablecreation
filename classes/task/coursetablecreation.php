@@ -155,7 +155,11 @@ class coursetablecreation extends \core\task\scheduled_task {
             // Loop through all staff accounts.
             foreach ($sandboxes as $sandbox) {
                 // Create fullname, shortname and idnumber for use in table. SB- for easy identifying in UI/Db.
-                $sbfull = 'Sandbox Page: ' . $sandbox->username . ' - ' . $sandbox->firstname . ' ' . $sandbox->lastname;
+                // Remove ' from fullname if present (prevents issues with sql line).
+                $firstname = str_replace("'", "", $sandbox->firstname);
+                $lastname = str_replace("'", "", $sandbox->lastname);
+
+                $sbfull = 'Sandbox Page: ' . $sandbox->username . ' - ' . $firstname . ' ' . $lastname;
                 $sbshort = 'SB-' . $sandbox->username;
                 $sbidnumber = 'SB-' . $sandbox->username;
                 // Set new staff sandbox in table by inserting the data created above.
