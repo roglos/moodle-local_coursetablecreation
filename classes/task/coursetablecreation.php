@@ -135,7 +135,7 @@ class coursetablecreation extends \core\task\scheduled_task {
             $sql = "INSERT INTO " . $tablename . " (course_fullname,course_shortname,course_idnumber,category_id)
                 VALUES ('" . $modfullname . "','" . $modpage->course_shortname . "','" .
                 $modpage->course_idnumber . "','" . $modcategory->id . "')";
-            echo $sql;
+//            echo $sql;
             $DB->execute($sql);
         }
 
