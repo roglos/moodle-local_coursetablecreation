@@ -119,10 +119,31 @@ class coursetablecreation extends \core\task\scheduled_task {
 
         // Loop through MAV list array to create site details for each one.
         foreach ($modpages as $modpage) {
-            $modfullnameold = $modpage->course_fullname;
+            $modfullname = $modpage->course_fullname;
+            $modshortname = $modpage->course_shortname;
             // Remove ' from fullname if present (prevents issues with sql line).
-            $modfullnametwo = str_replace("'", "", $modfullnameold);
-            $modfullname = str_replace("?", "", $modfullnametwo);
+            $modfullname = str_replace("'", "", $modfullname);
+            $modshortname = str_replace("'", "", $modshortname);
+
+            // Remove em dash, replace with -
+            $em_dash = html_entity_decode('&#x2013;', ENT_COMPAT, 'UTF-8');
+            $modfullname = str_replace($em_dash, '-', $modfullname);
+            $modshortname = str_replace($em_dash, '-', $modshortname);
+
+            $em_dash2 = html_entity_decode('&#8212;', ENT_COMPAT, 'UTF-8');
+            $modfullname = str_replace($em_dash2, '-', $modfullname);
+            $modshortname = str_replace($em_dash2, '-', $modshortname);
+
+            $modfullname = str_replace('\u2014', '-', $modfullname);
+            $modshortname = str_replace('\u2014', '-', $modshortname);
+
+            // Remove ? from fullname
+            $modfullname = str_replace("?", "", $modfullname);
+            $modshortname = str_replace("?", "", $modshortname);
+
+            // Remove &
+            $modfullname = str_replace("&", " and ", $modfullname);
+            $modshortname = str_replace("&", " and ", $modshortname);
 
             // Find the category id using the category idnumber. id needed for table.
             $modcategoryidnumber = $modpage->category_idnumber;
