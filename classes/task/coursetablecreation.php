@@ -180,9 +180,10 @@ class coursetablecreation extends \core\task\scheduled_task {
                 $firstname = str_replace("'", "", $sandbox->firstname);
                 $lastname = str_replace("'", "", $sandbox->lastname);
 
-                $sbfull = 'Sandbox Page: ' . $sandbox->username . ' - ' . $firstname . ' ' . $lastname;
-                $sbshort = 'SB-' . $sandbox->username;
-                $sbidnumber = 'SB-' . $sandbox->username;
+//                $sbfull = 'Sandbox Page: ' . $sandbox->username . ' - ' . $firstname . ' ' . $lastname;
+                $sbfull = $firstname . ' ' . $lastname . '- ' . $sandbox->username . ': Sandbox Test Page';
+                $sbshort = $sandbox->username . '_SB';
+                $sbidnumber = $sandbox->username . '_SB';
                 // Set new staff sandbox in table by inserting the data created above.
                 $sql4 = "INSERT INTO " . $tablename . " (course_fullname,course_shortname,course_idnumber,category_id)
                     VALUES ('" . $sbfull . "','" . $sbshort . "','" . $sbidnumber . "','" .$sbcategory->id . "')";
